@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 🔐 Configurações
-const TOKEN = "meu_token_access";
+const TOKEN = "meu_token";
 const PHONE_NUMBER_ID = "658464957355487";
 const VERIFY_TOKEN = "meu_token";
 const MONGO_URI = "mongodb+srv://Klishiman:MinhaSenha++@cluster0.ndtbrp6.mongodb.net/whatsappDB?retryWrites=true&w=majority";
