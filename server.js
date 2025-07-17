@@ -7,10 +7,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 🔐 Configurações
-const TOKEN = "SEU_TOKEN_DE_ACESSO";
-const PHONE_NUMBER_ID = "SEU_PHONE_NUMBER_ID";
+const TOKEN = "EAAJtoiFNp9wBPPwsGWw2TbW5ZCdMQYCT7o9uMSVqtFznuZCFfxFEJnWb9zDIJV4bXMrdzJRG8wj3WRHil8RN1ZAMwJeJNptNhJoB9E1c3YolyJBmtIZCoYQZAoce4Pe9VSsZADJxK6Mo0YCpkUFPX5pMm9yTSutRZAExVexIkIyGzhD3P9ShkPci5l7uNtIineRlCINguZAvZBX8vwvoTBm1ZAZBdpAMB1W2ZARb4kwjzgZDZD";
+const PHONE_NUMBER_ID = "658464957355487";
 const VERIFY_TOKEN = "meu_token";
-const MONGO_URI = "SUA_STRING_DE_CONEXÃO_MONGODB";
+const MONGO_URI = "mongodb+srv://Klishiman:Rashemesh%40123@cluster0.ndtbrp6.mongodb.net/whatsappDB?retryWrites=true&w=majority";
 
 const client = new MongoClient(MONGO_URI);
 app.use(express.json());
