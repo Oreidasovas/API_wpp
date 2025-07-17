@@ -6,100 +6,82 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔐 Configurações
-const TOKEN = "meu_token";
-const PHONE_NUMBER_ID = "658464957355487";
-const VERIFY_TOKEN = "meu_token";
-const MONGO_URI = "mongodb+srv://Klishiman:MinhaSenha++@cluster0.ndtbrp6.mongodb.net/whatsappDB?retryWrites=true&w=majority";
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const MONGO_URI = process.env.MONGO_URI;
 
-const client = new MongoClient(MONGO_URI);
 app.use(express.json());
 
-// ✅ Verificação do Webhook
+// === Rota de verificação do Webhook ===
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("🔗 Webhook verificado.");
+    console.log("✅ Webhook verificado com sucesso!");
     return res.status(200).send(challenge);
   } else {
+    console.warn("❌ Falha na verificação do Webhook.");
     return res.sendStatus(403);
   }
 });
 
-// ✅ Recebimento e resposta automática
+// === Rota para receber mensagens reais ===
 app.post("/webhook", async (req, res) => {
-  try {
-    const mensagem = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    const numero = mensagem?.from;
-    const texto = mensagem?.text?.body;
+  const entry = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+  if (entry) {
+    const { from, text } = entry;
+    const msg = text?.body || "Mensagem sem texto";
 
-    if (mensagem && texto) {
-      console.log(`📩 Mensagem recebida de ${numero}: ${texto}`);
+    // Enviar resposta automática
+    await axios.post(
+      `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: from,
+        text: { body: "Recebido com sucesso! Obrigado pela sua mensagem." },
+      },
+      { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+    );
 
-      // Enviar resposta automática
-      await axios.post(
-        `https://graph.facebook.com/v17.0/658464957355487/messages`,
-        {
-          messaging_product: "whatsapp",
-          to: numero,
-          type: "text",
-          text: {
-            body: "Olá! Recebemos sua mensagem. Em breve nossa equipe entrará em contato.",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer EAAJtoiFNp9wBPPwsGWw2TbW5ZCdMQYCT7o9uMSVqtFznuZCFfxFEJnWb9zDIJV4bXMrdzJRG8wj3WRHil8RN1ZAMwJeJNptNhJoB9E1c3YolyJBmtIZCoYQZAoce4Pe9VSsZADJxK6Mo0YCpkUFPX5pMm9yTSutRZAExVexIkIyGzhD3P9ShkPci5l7uNtIineRlCINguZAvZBX8vwvoTBm1ZAZBdpAMB1W2ZARb4kwjzgZDZD`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("✅ Resposta automática enviada");
-
-      // Salvar no MongoDB
+    // Salvar no MongoDB
+    try {
+      const client = new MongoClient(MONGO_URI);
       await client.connect();
-      const db = client.db("whatsappDB");
-      const mensagens = db.collection("mensagens");
-      await mensagens.insertOne({
-        numero,
-        mensagem: texto,
-        data: new Date(),
-      });
+      const db = client.db();
+      const collection = db.collection("mensagens");
+      await collection.insertOne({ from, msg, date: new Date() });
+      await client.close();
+    } catch (err) {
+      console.error("Erro ao salvar no MongoDB:", err);
     }
-  } catch (err) {
-    console.error("❌ Erro ao processar mensagem:", err.message);
   }
 
   res.sendStatus(200);
 });
 
-// ✅ Rota para visualizar mensagens em HTML
+// === Página de mensagens recebidas (HTML simples) ===
 app.get("/", async (req, res) => {
   try {
+    const client = new MongoClient(MONGO_URI);
     await client.connect();
-    const db = client.db("whatsappDB");
-    const mensagens = await db.collection("mensagens").find().toArray();
+    const db = client.db();
+    const mensagens = await db.collection("mensagens").find().sort({ date: -1 }).toArray();
+    await client.close();
 
-    let html = `
-      <h1>Mensagens Recebidas</h1>
-      <ul style="font-family: Arial">
-    `;
-    mensagens.forEach((msg) => {
-      html += `<li><strong>${msg.numero}</strong>: ${msg.mensagem} <em>(${new Date(msg.data).toLocaleString()})</em></li>`;
-    });
-    html += "</ul>";
-
-    res.send(html);
+    const html = mensagens
+      .map(m => `<p><strong>${m.from}</strong>: ${m.msg} <em>(${m.date.toLocaleString()})</em></p>`)
+      .join("");
+    res.send(`<h1>Mensagens Recebidas</h1>${html}`);
   } catch (err) {
-    res.status(500).send("Erro ao carregar mensagens.");
+    res.status(500).send("Erro ao buscar mensagens.");
   }
 });
 
-// ✅ Start
+// === Inicializa o servidor ===
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
+
