@@ -41,7 +41,7 @@ app.post("/webhook", async (req, res) => {
 
       // Enviar resposta automática
       await axios.post(
-        `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`,
+        `https://graph.facebook.com/v17.0/658464957355487/messages`,
         {
           messaging_product: "whatsapp",
           to: numero,
@@ -52,7 +52,7 @@ app.post("/webhook", async (req, res) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${TOKEN}`,
+            Authorization: `Bearer EAAJtoiFNp9wBPPwsGWw2TbW5ZCdMQYCT7o9uMSVqtFznuZCFfxFEJnWb9zDIJV4bXMrdzJRG8wj3WRHil8RN1ZAMwJeJNptNhJoB9E1c3YolyJBmtIZCoYQZAoce4Pe9VSsZADJxK6Mo0YCpkUFPX5pMm9yTSutRZAExVexIkIyGzhD3P9ShkPci5l7uNtIineRlCINguZAvZBX8vwvoTBm1ZAZBdpAMB1W2ZARb4kwjzgZDZD`,
             "Content-Type": "application/json",
           },
         }
