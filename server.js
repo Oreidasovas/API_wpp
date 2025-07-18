@@ -1,11 +1,11 @@
 const express = require("express");
 const axios = require("axios");
 const { MongoClient } = require("mongodb");
-const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Variáveis de ambiente
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
@@ -13,23 +13,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 app.use(express.json());
 
-// Rota raiz para visualizar mensagens (ou testar se a API está online)
-app.get("/", async (req, res) => {
-  try {
-    const mensagens = await db.collection("mensagens").find().sort({ timestamp: -1 }).toArray();
-
-    let html = "<h1>Mensagens Recebidas</h1>";
-    mensagens.forEach(msg => {
-      html += `<p><strong>${msg.from}</strong>: ${msg.body} <em>(${new Date(msg.timestamp).toLocaleString("pt-BR")})</em></p>`;
-    });
-
-    res.send(html);
-  } catch (error) {
-    res.status(500).send("Erro ao carregar mensagens.");
-  }
-});
-
-// === Rota de verificação do Webhook ===
+// 🔗 Verificação do Webhook
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -44,14 +28,14 @@ app.get("/webhook", (req, res) => {
   }
 });
 
-// === Rota para receber mensagens reais ===
+// 📩 Recebe e responde mensagens
 app.post("/webhook", async (req, res) => {
   const entry = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
   if (entry) {
     const { from, text } = entry;
     const msg = text?.body || "Mensagem sem texto";
 
-    // Enviar resposta automática
+    // ✅ Envia resposta automática
     await axios.post(
       `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
       {
@@ -59,16 +43,24 @@ app.post("/webhook", async (req, res) => {
         to: from,
         text: { body: "Recebido com sucesso! Obrigado pela sua mensagem." },
       },
-      { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
+      {
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
 
-    // Salvar no MongoDB
+    // 💾 Salva no MongoDB
     try {
       const client = new MongoClient(MONGO_URI);
       await client.connect();
       const db = client.db();
-      const collection = db.collection("mensagens");
-      await collection.insertOne({ from, msg, date: new Date() });
+      await db.collection("mensagens").insertOne({
+        from,
+        msg,
+        date: new Date(),
+      });
       await client.close();
     } catch (err) {
       console.error("Erro ao salvar no MongoDB:", err);
@@ -78,7 +70,7 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// === Página de mensagens recebidas (HTML simples) ===
+// 🌐 Página HTML para ver mensagens salvas
 app.get("/", async (req, res) => {
   try {
     const client = new MongoClient(MONGO_URI);
@@ -88,7 +80,10 @@ app.get("/", async (req, res) => {
     await client.close();
 
     const html = mensagens
-      .map(m => `<p><strong>${m.from}</strong>: ${m.msg} <em>(${m.date.toLocaleString()})</em></p>`)
+      .map(
+        (m) =>
+          `<p><strong>${m.from}</strong>: ${m.msg} <em>(${m.date.toLocaleString("pt-BR")})</em></p>`
+      )
       .join("");
     res.send(`<h1>Mensagens Recebidas</h1>${html}`);
   } catch (err) {
@@ -96,8 +91,9 @@ app.get("/", async (req, res) => {
   }
 });
 
-// === Inicializa o servidor ===
+// 🚀 Inicializa o servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
+
 
