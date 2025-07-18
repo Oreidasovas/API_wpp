@@ -75,7 +75,7 @@ app.get("/", async (req, res) => {
   try {
     const client = new MongoClient(MONGO_URI);
     await client.connect();
-    const db = client.db();
+const db = client.db("whatsappDB");
     const mensagens = await db.collection("mensagens").find().sort({ date: -1 }).toArray();
     await client.close();
 
