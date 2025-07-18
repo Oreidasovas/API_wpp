@@ -55,7 +55,7 @@ app.post("/webhook", async (req, res) => {
     try {
       const client = new MongoClient(MONGO_URI);
       await client.connect();
-      const db = client.db();
+      const db = client.db("whatsappDB");
       await db.collection("mensagens").insertOne({
         from,
         msg,
