@@ -13,6 +13,22 @@ const MONGO_URI = process.env.MONGO_URI;
 
 app.use(express.json());
 
+// Rota raiz para visualizar mensagens (ou testar se a API está online)
+app.get("/", async (req, res) => {
+  try {
+    const mensagens = await db.collection("mensagens").find().sort({ timestamp: -1 }).toArray();
+
+    let html = "<h1>Mensagens Recebidas</h1>";
+    mensagens.forEach(msg => {
+      html += `<p><strong>${msg.from}</strong>: ${msg.body} <em>(${new Date(msg.timestamp).toLocaleString("pt-BR")})</em></p>`;
+    });
+
+    res.send(html);
+  } catch (error) {
+    res.status(500).send("Erro ao carregar mensagens.");
+  }
+});
+
 // === Rota de verificação do Webhook ===
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
